@@ -1,0 +1,9 @@
+foo(var){
+    privvar=1+1;
+    print(var)
+    print(privvar)
+}
+
+
+foo(2)
+
