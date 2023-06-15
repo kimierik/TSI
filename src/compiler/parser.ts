@@ -9,7 +9,29 @@ import { InfixToPostfix } from "../utils/fixTransoformations";
 
 
 //probably should be interface
-interface Expr{}
+interface Expr{
+    eDiscriminator:string | "RAW EXPRESSION"
+}
+
+function makeExpr(){
+    return{
+        eDiscriminator:"RAW EXPRESSION"
+    }
+}
+
+
+function intoExpr(e:Expr|undefined):Expr{
+    if (e?.eDiscriminator== undefined){
+        let a={
+            ...e,
+            eDiscriminator:"RAW EXPRESSION"
+        }
+        return a
+    }
+    return e
+}
+
+
 interface Statement{
     discriminator:string | "RawStatement"
 }
@@ -19,6 +41,7 @@ type FunctionDecl={
     name:string
     body:Statement[]
     parameterC:number
+    parameterNames:string[]
 }
 
 
@@ -28,12 +51,14 @@ function makeFuncDecl():FunctionDecl{
         name:"",
         body:[],
         parameterC:0,
+        parameterNames:[]
     }
 }
 
 
 type FunctionCall={
     discriminator:"FunctionCall"
+    eDiscriminator:"FunctionCall"
     name:string,
     arguments:Expr[],
 }
@@ -42,6 +67,7 @@ type FunctionCall={
 function makeFuncCall():FunctionCall{
     return{
         discriminator:"FunctionCall",
+        eDiscriminator:"FunctionCall",
         name:"",
         arguments:[],
     }
@@ -50,8 +76,18 @@ function makeFuncCall():FunctionCall{
 
 
 type VariableRefrence={
+    eDiscriminator:"VariableRefrence"
     name:string,
 }
+
+function makeVariableRefrence(name:string):VariableRefrence{
+    return{
+        eDiscriminator:"VariableRefrence",
+        name:name,
+    }
+}
+
+
 type VariableAssigment={
     discriminator:"VariableAssigment"
     name:string,
@@ -63,21 +99,42 @@ function makeVariableAssigment():VariableAssigment{
     return{
         discriminator:"VariableAssigment",
         name:"",
-        val:{}
+        val: makeExpr(),
     }
 }
 
 
 
 type ILiteralNode={
+    eDiscriminator:"NumLiteral"
     val:number
 }
 
+function makeILiteralNode(val:number):ILiteralNode{
+    return{
+        eDiscriminator:"NumLiteral",
+        val:val
+    }
+}
+
 type OpNode={
+    eDiscriminator:"Operation"
     l:Expr,
     r:Expr,
     opp:string
 }
+
+function makeOpnode():OpNode{
+    return{
+        eDiscriminator:"Operation",
+        l:makeExpr(),
+        r:makeExpr(),
+        opp:""
+
+    }
+
+}
+
 
 
 
@@ -155,11 +212,13 @@ class Parser{
         decl.name=this.tokens[this.position++].val
         
 
+        this.position++ //jump (
         while( this.tokens[this.position].tokentype!=TokenType.Rparen){
             //paramcount
             //loop through params untill hit )
             if(this.tokens[this.position].tokentype!=TokenType.Comma){
                 decl.parameterC++
+                decl.parameterNames.push(this.tokens[this.position].val)
             }
             this.position++
         }
@@ -293,7 +352,7 @@ class Parser{
             switch (tok.tokentype){
             case TokenType.NumLiteral:
                 let val=parseInt(tok.val)
-                return {val} as ILiteralNode
+                return makeILiteralNode(val)
 
                 /*
             case StringLiteral:
@@ -301,28 +360,49 @@ class Parser{
                     * */
 
             case TokenType.Identifier:
-                return {name:tok.val} as VariableRefrence
+                return makeVariableRefrence(tok.val)
             }
         }
+        
+        //console.log("evalling")
+        //console.log(toEvalueate)
 
         let postfix:Token[]=InfixToPostfix(toEvalueate)
 
-        //fmt.Println("post fix notation of eval is")
-        //fmt.Println(postfix)
+        //console.log("post")
+        //console.log(postfix)
+
+
+
         //var exprs []Token
         var expressions :Expr[]=[]
 
         for (let i=0;i<postfix.length;i++){
             if (postfix[i].tokentype!=TokenType.Operator){
                 //switch and match what the token is?
-                //right now all happens to be ints TODO change
-                let val=parseInt(  postfix[i].val)
-                expressions.push( {val} as ILiteralNode) //iliteral node
+                switch (postfix[i].tokentype){
+                    case TokenType.NumLiteral:
+                        let val=parseInt(  postfix[i].val)
+                        expressions.push( makeILiteralNode(val)) //iliteral node
+                        break
+                    case TokenType.Identifier:
+                        expressions.push(makeVariableRefrence(postfix[i].val))
+                        break
+
+                    default: 
+                        console.log("EXPRESSION IS BAD")
+                }
+
+
             }else{
                 //fmt.Println(expressions)
                 let l=expressions.pop()
                 let r=expressions.pop()
-                expressions.push(  { l,  r, opp: postfix[i].val} as OpNode) //opp node
+                let opp=makeOpnode()
+                opp.l=intoExpr(l)
+                opp.r=intoExpr(r)
+                opp.opp=postfix[i].val
+                expressions.push(opp) //opp node
             }
         }
 
@@ -337,6 +417,6 @@ class Parser{
 
 }
 
-export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode}
+export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode,OpNode}
 
 

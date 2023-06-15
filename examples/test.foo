@@ -1,7 +1,11 @@
+bar(i){
+    print(i,i,i)
+}
+
+
 foo(var){
-    privvar=1+1;
     print(var)
-    print(privvar)
+    bar(var+1)
 }
 
 

@@ -1,0 +1,20 @@
+* interpreter in typescript
+  goal is to implement a propper stack machine with custom bytecode
+
+** useage
+   there are [[./examples][examples]]
+    
+   run 
+   #+BEGIN_SRC bash
+     npm run run 
+   #+END_SRC
+   currently this executes examples/test.foo
+
+
+** features implemented
+   functions  
+   expression execution order
+   printing ints
+
+
+

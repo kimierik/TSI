@@ -24,7 +24,7 @@ function makeVM():VM{
 }
 
 
-function start_thing(code : ByteCode[]){
+function startVm(code : ByteCode[]){
 
     let vm=makeVM();
     vm.instructions=code;
@@ -39,6 +39,7 @@ function start_thing(code : ByteCode[]){
 
 
 function interpret_next_command(vm:VM){
+    //console.log("adress : ",vm.ip)
     let opcode= vm.instructions[vm.ip++];
 
     //i will purpoisly use as many preincrement and increment operations in indexing as possible
@@ -59,6 +60,14 @@ function interpret_next_command(vm:VM){
             let b=vm.stack[vm.sp--]
             vm.stack[++vm.sp] = a+b
             break;
+
+        case ByteCode.LOAD:
+            let offset=vm.instructions[vm.ip++]
+            vm.stack[++vm.sp]=vm.stack[vm.fp+offset]
+            break
+        case ByteCode.JUMP:
+            vm.ip=vm.instructions[vm.ip]
+            break
 
         case ByteCode.CALL:
             //all arguments should allready be on the stack
@@ -90,4 +99,4 @@ function interpret_next_command(vm:VM){
 
 
 
-export {start_thing}
+export {startVm}

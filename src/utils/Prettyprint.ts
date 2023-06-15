@@ -3,9 +3,9 @@
 
 
 import {type} from "os"
+import {ByteCode} from "../Bytecode"
 import * as parser from "../compiler/parser"
-import { FunctionCall,FunctionDecl,  } from "../compiler/parser"
-
+import { FunctionCall,FunctionDecl, VariableAssigment  } from "../compiler/parser"
 
 function prettyPrintAst(ast:parser.Statement[]){
     //go through tree and print it like it should be printer
@@ -22,15 +22,17 @@ function prettyPrintAst(ast:parser.Statement[]){
             case "FunctionDecl":
                 printFnDecl(statement as FunctionDecl)
                 break
+            case "VariableAssigment":
+                printVarAssigment(statement as VariableAssigment)
+                break
+            default:
+                console.log("unimplemented statement :" ,statement)
         }
 
 
     }
 
-
 }
-
-
 
 function printFncall(call:FunctionCall){
     console.log("caling : ",call.name)
@@ -38,10 +40,12 @@ function printFncall(call:FunctionCall){
     console.log("")
 }
 
-function printExpressions(expressions : parser.Expr){}
+function printVarAssigment(assigment : parser.VariableAssigment){
+    console.log("assigning :",assigment.val)
+    console.log("To variable :",assigment.name)
 
 
-
+}
 
 function printFnDecl(call:FunctionDecl){
     console.log("declared: ", call.name)
@@ -51,4 +55,70 @@ function printFnDecl(call:FunctionDecl){
     console.log("")
 }
 
-export {prettyPrintAst}
+
+
+
+
+function prettyPrintByteCode(code:number[]){
+
+    let pos=0
+    while( pos<code.length){
+        process.stdout.write("address :"+pos+"\t")
+        switch (code[pos]){
+            case ByteCode.ICONST:
+                console.log("ICONST " ,code[++pos])
+                pos++
+            continue
+
+
+            case ByteCode.IADD:
+                console.log("IADD ")
+                pos++
+            continue
+
+
+            case ByteCode.PRINT:
+                console.log("PRINT ")
+                pos++
+            continue
+
+            case ByteCode.RET:
+                console.log("RETURN ")
+                pos++
+            continue
+
+
+            case ByteCode.CALL:
+                console.log("CALL addr:", code[++pos],"wiht ",code[++pos])
+                pos++
+            continue
+
+            case ByteCode.LOAD:
+                console.log("LOAD:", code[++pos])
+                pos++
+            continue
+            case ByteCode.JUMP:
+                console.log("JUMP to:", code[++pos])
+                pos++
+            continue
+
+
+            case ByteCode.HALT:
+                console.log("HALT")
+                pos++
+            continue
+
+
+
+            default:
+                console.log("defaulted :",code[pos++])
+        }
+
+
+    }
+
+}
+
+
+
+export {prettyPrintAst, prettyPrintByteCode}
