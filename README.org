@@ -12,9 +12,12 @@
 
 
 ** features implemented
-   functions  
-   expression execution order
-   printing ints
+    - [X] functions  
+    - [X] expression execution order
+    - [X] printing ints
+    - [-] variables
+    - [ ] conditionals (if else)
+    - [ ] loops
 
 
 
