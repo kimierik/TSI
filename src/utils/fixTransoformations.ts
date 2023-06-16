@@ -17,7 +17,7 @@ function getOperatorPrecidence(op :string):number{
         return 1
 
     default:
-       console.log("token default")
+       console.log("op bad in precidence  : ",op)
         return 0
     }
 
@@ -62,4 +62,4 @@ function InfixToPostfix( tokens:Token[]):Token[]{
     return postfix
 
 }
-export {InfixToPostfix}
+export {InfixToPostfix, getOperatorPrecidence}

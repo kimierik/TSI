@@ -56,9 +56,26 @@ function interpret_next_command(vm:VM){
 
         //pop 2 from stack and add
         case ByteCode.IADD:
-            let a=vm.stack[vm.sp--]
-            let b=vm.stack[vm.sp--]
-            vm.stack[++vm.sp] = a+b
+            let aa=vm.stack[vm.sp--]
+            let ba=vm.stack[vm.sp--]
+            vm.stack[++vm.sp] = aa+ba
+            break;
+
+        case ByteCode.IMUL:
+            let am=vm.stack[vm.sp--]
+            let bm=vm.stack[vm.sp--]
+            vm.stack[++vm.sp] = am*bm
+            break;
+
+        case ByteCode.ISUB:
+            let as=vm.stack[vm.sp--]
+            let bs=vm.stack[vm.sp--]
+            vm.stack[++vm.sp] = as-bs
+            break;
+        case ByteCode.IDIV:
+            let ad=vm.stack[vm.sp--]
+            let bd=vm.stack[vm.sp--]
+            vm.stack[++vm.sp] = ad/bd
             break;
 
         case ByteCode.LOAD:

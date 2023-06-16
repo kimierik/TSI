@@ -4,10 +4,14 @@ bar(i){
 
 
 foo(var){
-    print(var)
     bar(var+1)
+    print(var)
 }
 
+reone(){
+    return (1)
+}
 
-foo(2)
+foo(1+1)
 
+print( reone() )

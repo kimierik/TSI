@@ -2,7 +2,6 @@
 
 
 
-import {type} from "os"
 import {ByteCode} from "../Bytecode"
 import * as parser from "../compiler/parser"
 import { FunctionCall,FunctionDecl, VariableAssigment  } from "../compiler/parser"
@@ -26,7 +25,7 @@ function prettyPrintAst(ast:parser.Statement[]){
                 printVarAssigment(statement as VariableAssigment)
                 break
             default:
-                console.log("unimplemented statement :" ,statement)
+                console.log("unprintavle statement :" ,statement)
         }
 
 
@@ -36,7 +35,11 @@ function prettyPrintAst(ast:parser.Statement[]){
 
 function printFncall(call:FunctionCall){
     console.log("caling : ",call.name)
-    console.log("with : ",call.arguments)
+    console.log("with : ")
+    for (let i =0;i<call.arguments.length;i++){
+        process.stdout.write("\t")
+        printExpr(call.arguments[i])
+    }
     console.log("")
 }
 
@@ -56,6 +59,31 @@ function printFnDecl(call:FunctionDecl){
 }
 
 
+function printExpr(e:parser.Expr){
+    switch(e.eDiscriminator){
+        case "NumLiteral":
+            let lit=e as parser.ILiteralNode
+            console.log("literal: ",lit.val)
+            break
+
+        case "Operation":
+            let op=e as parser.OpNode
+            console.log("opp: ",op.opp)
+            printExpr(op.l)
+            printExpr(op.r)
+            break
+
+        default:
+        console.log("unimplemented expression",e)
+    }
+
+}
+
+
+
+
+
+
 
 
 
@@ -73,6 +101,21 @@ function prettyPrintByteCode(code:number[]){
 
             case ByteCode.IADD:
                 console.log("IADD ")
+                pos++
+            continue
+
+            case ByteCode.IMUL:
+                console.log("IMUL ")
+                pos++
+            continue
+
+            case ByteCode.ISUB:
+                console.log("ISUB ")
+                pos++
+            continue
+
+            case ByteCode.IDIV:
+                console.log("IDIV ")
                 pos++
             continue
 
@@ -111,7 +154,7 @@ function prettyPrintByteCode(code:number[]){
 
 
             default:
-                console.log("defaulted :",code[pos++])
+                console.log("defaulted printing :",code[pos++])
         }
 
 

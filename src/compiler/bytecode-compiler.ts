@@ -3,7 +3,7 @@
 
 
 //walk ast and make the byte code from it
-import { Statement, FunctionCall, FunctionDecl, VariableAssigment,Expr, } from "./parser";
+import {ReturnNode, Statement, FunctionCall, FunctionDecl, VariableAssigment,Expr, } from "./parser";
 import * as par from "./parser"
 import { ByteCode } from "../Bytecode";
 import {exit} from "process";
@@ -34,6 +34,10 @@ export class ByteCodeCompiler{
                     this.compileFunctionCall(statement as FunctionCall,caller)
                     break
 
+                case "ReturnStatement":
+                    this.compileReturn(statement as ReturnNode,caller)
+                    break
+
                 case "FunctionDecl":
                     this.compileFunctionDecl(statement as FunctionDecl)
                     break
@@ -53,6 +57,14 @@ export class ByteCodeCompiler{
 
     public getbytecode():number[]{
         return this.byteCodeArray
+    }
+
+    private compileReturn(stat:ReturnNode, caller:undefined|FunctionDecl){
+        //what the fuck is return
+        //just push the literal and then RET?
+        this.compileExpression(stat.rets, caller)
+        this.byteCodeArray.push(ByteCode.RET)
+
     }
 
 
@@ -145,6 +157,10 @@ export class ByteCodeCompiler{
                 this.byteCodeArray.push(n.val)
                 break
 
+                case "FunctionCall":
+                    this.compileFunctionCall(expr as FunctionCall,caller)
+                    break
+
             default:
                 console.log("uncompileable expression :" ,expr, "in caller: ", caller)
         }
@@ -194,6 +210,9 @@ export class ByteCodeCompiler{
 
         this.declaredFunctionsMap[decl.name]=addr
 
+
+        this.byteCodeArray.push(ByteCode.ICONST)
+        this.byteCodeArray.push(0)
         this.byteCodeArray.push(ByteCode.RET)
         
 

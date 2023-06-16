@@ -10,27 +10,28 @@ import { ByteCodeCompiler } from "./compiler/bytecode-compiler";
 
 
 function main(){
-    //console.log("main start")
+    console.log("main start")
     let parser=new Parser;
     let compiler = new ByteCodeCompiler()
 
-    //start_thing(code)
     let data= fs.readFileSync(path.join(__dirname,"../examples/test.foo") )
-    //console.log(data.toString())
+
     let tokens=lexInput(data.toString())
+    
     let ast=parser.parseTokens(tokens)
-   // prettyPrintAst(ast)
+
+
+    //prettyPrintAst(ast)
 
     compiler.compileAst(ast,undefined)
     let code= compiler.getbytecode()
+
+    //currently manually push halt
     code.push(ByteCode.HALT)
+    
     //prettyPrintByteCode(code)
+
     startVm(code)
-    
-
-
-    
-
 
     //console.log("main ended")
 }

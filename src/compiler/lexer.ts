@@ -1,5 +1,7 @@
 //lex string into token list
 
+import {exit} from "process"
+
 //should be used to lex a file and a line
 //so we can do propper interpretation thing
 
@@ -20,6 +22,10 @@ export enum TokenType{
 
     Equals,
     EOF,
+
+
+    KWReturn,
+    KWIf,
 }
 
 
@@ -90,6 +96,16 @@ function lexInput(input:string):Token[]{
                 strPos++
                 continue
 
+            case  '*' :
+                tokens.push(makeToken(TokenType.Operator, char))
+                strPos++
+                continue
+
+            case  '/' :
+                tokens.push(makeToken(TokenType.Operator, char))
+                strPos++
+                continue
+
             case ',' :
                 tokens.push(makeToken(TokenType.Comma, char))
                 strPos++
@@ -118,7 +134,12 @@ function lexInput(input:string):Token[]{
         }
         //bad
         if (isChar(id[0])){
-            tokens.push(makeToken(TokenType.Identifier, id))
+            if(isKeyword(id)){
+                tokens.push(handleKeyword(id))
+
+            }else{
+                tokens.push(makeToken(TokenType.Identifier, id))
+            }
             continue
         }
         
@@ -146,7 +167,22 @@ function lexInput(input:string):Token[]{
 }
 
 
+//TODO make the keyword handling better
 
+function isKeyword(id:string):boolean{
+    return id=="return"
+}
+
+function handleKeyword(id:string):Token{
+    switch(id){
+        case "return":
+            return makeToken(TokenType.KWReturn, id)
+        default:
+            console.log("cannot handle keyword : ",id)
+            exit()
+    }
+
+}
 
 
 export {lexInput,Token} 

@@ -3,7 +3,9 @@
 import { Token } from "./lexer"
 import { TokenType } from "./lexer";
 
-import { InfixToPostfix } from "../utils/fixTransoformations";
+import { getOperatorPrecidence, InfixToPostfix } from "../utils/fixTransoformations";
+import {exit} from "process";
+import { prettyPrintAst } from "../utils/Prettyprint";
 
 
 
@@ -78,6 +80,17 @@ function makeFuncCall():FunctionCall{
 type VariableRefrence={
     eDiscriminator:"VariableRefrence"
     name:string,
+}
+
+type ReturnNode={
+    discriminator:"ReturnStatement"
+    rets:Expr
+}
+function makeReturnNode(e:Expr):ReturnNode{
+    return{
+        discriminator:"ReturnStatement",
+        rets:e
+    }
 }
 
 function makeVariableRefrence(name:string):VariableRefrence{
@@ -155,7 +168,7 @@ class Parser{
             }
             stats.push(stat)
             
-            this.position++
+           // this.position++//this?? this skips it
 
         }
 
@@ -182,7 +195,23 @@ class Parser{
             return undefined
         }
 
+        if (this.tokens[this.position].tokentype==TokenType.KWReturn){
+            //handle returning
+            //TODO make a function for handling singular expression
+            //let e =    //get expression
+            this.position+=2 //ret and (
+            //let e = this.parseFuncParameters()[0]
+            let e = this.parsefunctionparameters()[0]
+            //console.log(e)
+            this.position++ //)
+            return makeReturnNode(e)
+        }
+
+        console.log("prev tok", this.tokens[this.position-1] ,"pos :", this.position-1 )
         console.log("no statement parsed from : ", this.tokens[this.position] ,"pos :", this.position )
+        console.log("next tok", this.tokens[this.position+1] ,"pos :", this.position+1 )
+        console.log()
+        return undefined
     }
 
     private parseFunction():Statement{
@@ -236,6 +265,7 @@ class Parser{
         }
 
           //console.log("fn decl name: ",decl.name,". params: ", decl.params, ". body: ",decl.body )
+        this.position++ //skip }
 
         return decl
 
@@ -246,60 +276,156 @@ class Parser{
             //{ name:this.tokens[this.position].val, arguments:[] }
         call.name=this.tokens[this.position].val
 
-        this.position+=2
+        this.position+=2 //id and (
 
-        call.arguments=this.parseFuncParameters()
+       // call.arguments=this.parseFuncParameters()
+        call.arguments=this.parsefunctionparameters()
         
-        this.position++
+        this.position++ //skip )
         return call
 
     }
 
-    private parseFuncParameters(){
+
+    // this would only parse literals, variables and function calls
+    private parseSingularExpression():Expr{
+
+        if(this.tokens[this.position].tokentype==TokenType.NumLiteral){
+            return makeILiteralNode( parseInt(this.tokens[this.position++].val) )
+        }
+        if(this.tokens[this.position].tokentype==TokenType.Identifier){
+
+            if(this.tokens[this.position+1].tokentype==TokenType.Lparen){
+                let call=this.parseFnCall()
+                //this.position--//hack since parse fn call skips 3 when we need to sskip 2 
+                return call
+            }
+            return makeVariableRefrence(this.tokens[this.position++].val)
+        }
+
+
+
+        console.log("no expression " , this.tokens[this.position])
+        exit()
+    }
+
+    // returns list of expressions
+    // opps are allready in binary tree form
+    //TODO over massive funcdtion should a be split 
+    private parsefunctionparameters(){
+
 
         let expressions:Expr[] = []
-    
-        //buffer for expressions that we have yet to evaluate 
-        //should we instead of []token do []Expr and we collapse this into a op node when we evaluate it
+        let post:Expr[] = []
+        //list of operators are needed for algo
+        let opps:Token[]=[]
 
+        // we need to do the InfixToPostfix conversion in this functiopn
+        // when we run into a token that is an opp we do the thing
+        // when we run into a token that is not an opp we make an expression from it and do somethign with it
 
-        //TODO this needs to change if we want funcs in expressions
-        //TODO variables
-
-        let toEvalueate: Token[]=[]
         while( this.tokens[this.position].tokentype!=TokenType.Rparen){
+            let tok=this.tokens[this.position]
             //needs to go through al tokens untill )
             if (this.tokens[this.position].tokentype!=TokenType.Comma ){
-                toEvalueate.push( this.tokens[this.position++])
-            }else{
-                if (toEvalueate.length>0){
-                    
-                    let evalexpr=this.EvaluateExpression(toEvalueate)
-                    if (evalexpr!=undefined){
-                        expressions.push(evalexpr)
-                        toEvalueate.length=0
+                if (this.tokens[this.position].tokentype!=TokenType.Operator){
+                    let ex = this.parseSingularExpression()
+                    post.push(ex)
+                    //make token into expression
+                    //put it on expressions
+                }else{
+                    this.position++
+                    while(opps.length>0 && getOperatorPrecidence(tok.val) <= getOperatorPrecidence(opps[opps.length-1].val)){
+                        //pop stack put it on the post expr list
+                        let a =opps.pop()
+                        if (a!= undefined){
+                            let op=makeOpnode()
+                            op.opp=a.val
+                            //make post list into bin expr
+                            let l=post.pop()
+                            let r=post.pop()
+                            if (l==undefined || r==undefined){
+                                console.log("operrands undefined")
+                                exit()
+                            }
+                            op.l=l
+                            op.r=r
+                            
+                            //console.log("op ", op)
+
+                            post.push(op)
+                        }
+
                     }
+                    opps.push(tok)
+                    ///is opp
+                    // do opp logic from the infix postfix transformation
+
                 }
+                
+
+            }else{
                 this.position++
+                //we hit ',' so we need to end the expression we made
+                this.endExpression(opps, post, expressions)
+
             }
 
+            //skip the token we were looking at
         }
 
+        // end the expression in post 
+        this.endExpression(opps, post, expressions)
 
-        if (toEvalueate.length>0){
-            let evalexpr=this.EvaluateExpression(toEvalueate)
-            if (evalexpr!=undefined){
-                expressions.push(evalexpr)
-                toEvalueate.length=0
-            }
-        }
 
-        
         //console.log("expressions of parse func parameters")
         //console.log(expressions)
+
+        //console.log("returns parameters at:",this.tokens[this.position], this.position)
         return expressions
+    }
+
+
+
+    //used by parsefunctionparameters
+    private endExpression(opps:Token[],post:Expr[],expressions:Expr[]){
+        //the expression we have is complete we need to do something with it now
+        //console.log("opps buffer ",opps)
+
+        //the stack probably has something and we should clean it 
+        while( opps.length>0){
+            let a=opps.pop()
+            if (a!= undefined){
+                let op=makeOpnode()
+                op.opp=a.val
+                //make post list into bin expr
+                let l=post.pop()
+                let r=post.pop()
+                if (l==undefined || r==undefined){
+                    console.log("operrands undefined")
+                    exit()
+                }
+                op.l=l
+                op.r=r
+
+                post.push(op)
+            }
+        }
+
+
+
+
+        //put postfix should be size 1 and we should push it onto expressionss
+        //console.log("post size", post.length)
+        let e=post.pop()
+        //console.log("e of opps", e)
+        if (e!=undefined){
+            expressions.push(e)
+        }
+
 
     }
+
 
 
     private parseVariableAssigment():Statement{
@@ -322,6 +448,7 @@ class Parser{
 
         let toEvalueate :Token[]=[]
 
+        // TODO !!??!!??!!??!!??!!??!!??!!??!! WTF IS THIS??? HOW DOES THIS WORK, WE DONT HAVE SEMICOLONS
         while( this.tokens[this.position].tokentype!=TokenType.Semicolon){
             toEvalueate.push( this.tokens[this.position++])
         }
@@ -337,9 +464,8 @@ class Parser{
 
     }
 
+    //takes list of tokens [1+2] and makes it into an expression
     private EvaluateExpression( toEvalueate:Token[]):Expr|undefined{
-        //fmt.Println("evaluationg")
-        //fmt.Println(toEvalueate)
 
         if(toEvalueate.length==0){
             return undefined
@@ -390,7 +516,7 @@ class Parser{
                         break
 
                     default: 
-                        console.log("EXPRESSION IS BAD")
+                        console.log("EXPRESSION IS BAD", postfix[0])
                 }
 
 
@@ -417,6 +543,6 @@ class Parser{
 
 }
 
-export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode,OpNode}
+export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode,OpNode,ReturnNode}
 
 
