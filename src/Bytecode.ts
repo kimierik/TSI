@@ -6,7 +6,11 @@ export enum ByteCode{
     JUMP,
 
     LOAD,
+    SAVE,
 
+
+    JLT,
+    JEQ,
 
     IADD,
     IMUL,
@@ -24,11 +28,17 @@ export enum ByteCode{
     * PRINT         prints top of stack
     * HALT          ends program
     * JUMP          jumps to next value
+    *
     * LOAD          loads value from stack
+    *
+    * JLT           jump less than pop's 2 from stack compares if lesthan jumps to adress
+    * JEQ           jump less than pop's 2 from stack compares if eq jumps to adress
+    *
     * IADD          pop's 2 and applies propper operrand
     * ISUB          pop's 2 and applies propper operrand
     * IMUL          pop's 2 and applies propper operrand
-    * IDIB          pop's 2 and applies propper operrand
+    * IDIV          pop's 2 and applies propper operrand
+    *
     * CALL          jumps to address with paramcount
     * RET           returns
     *

@@ -21,6 +21,8 @@ export enum TokenType{
     Operator,
 
     Equals,
+    LessThan,
+    moreThan,
     EOF,
 
 
@@ -91,7 +93,12 @@ function lexInput(input:string):Token[]{
                 strPos++
                 continue
 
-            case '+' || '*' || '-' || '/':
+            case '-' :
+                tokens.push(makeToken(TokenType.Operator, char))
+                strPos++
+                continue
+
+            case '+' || '/':
                 tokens.push(makeToken(TokenType.Operator, char))
                 strPos++
                 continue
@@ -106,6 +113,9 @@ function lexInput(input:string):Token[]{
                 strPos++
                 continue
 
+
+
+
             case ',' :
                 tokens.push(makeToken(TokenType.Comma, char))
                 strPos++
@@ -115,8 +125,18 @@ function lexInput(input:string):Token[]{
                 tokens.push(makeToken(TokenType.Semicolon, char))
                 strPos++
                 continue
+
             case '=' :
                 tokens.push(makeToken(TokenType.Equals, char))
+                strPos++
+                continue
+
+            case '<' :
+                tokens.push(makeToken(TokenType.LessThan, char))
+                strPos++
+                continue
+            case '>' :
+                tokens.push(makeToken(TokenType.moreThan, char))
                 strPos++
                 continue
         }
@@ -170,13 +190,15 @@ function lexInput(input:string):Token[]{
 //TODO make the keyword handling better
 
 function isKeyword(id:string):boolean{
-    return id=="return"
+    return id=="return" || id=="if"
 }
 
 function handleKeyword(id:string):Token{
     switch(id){
         case "return":
             return makeToken(TokenType.KWReturn, id)
+        case "if":
+            return makeToken(TokenType.KWIf, id)
         default:
             console.log("cannot handle keyword : ",id)
             exit()

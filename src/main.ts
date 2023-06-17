@@ -14,7 +14,8 @@ function main(){
     let parser=new Parser;
     let compiler = new ByteCodeCompiler()
 
-    let data= fs.readFileSync(path.join(__dirname,"../examples/test.foo") )
+    let data= fs.readFileSync(path.join(__dirname,"../examples/factorial.foo") )
+    //let data= fs.readFileSync(path.join(__dirname,"../examples/test.foo") )
 
     let tokens=lexInput(data.toString())
     
@@ -31,7 +32,7 @@ function main(){
     
     //prettyPrintByteCode(code)
 
-    startVm(code)
+    startVm(code,false)
 
     //console.log("main ended")
 }

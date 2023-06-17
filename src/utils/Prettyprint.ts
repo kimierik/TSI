@@ -87,11 +87,14 @@ function printExpr(e:parser.Expr){
 
 
 
+
 function prettyPrintByteCode(code:number[]){
 
     let pos=0
     while( pos<code.length){
+
         process.stdout.write("address :"+pos+"\t")
+
         switch (code[pos]){
             case ByteCode.ICONST:
                 console.log("ICONST " ,code[++pos])
@@ -140,6 +143,23 @@ function prettyPrintByteCode(code:number[]){
                 console.log("LOAD:", code[++pos])
                 pos++
             continue
+
+            case ByteCode.JEQ:
+                console.log("if EQ jump to:", code[++pos])
+                pos++
+            continue
+
+            case ByteCode.JLT:
+                console.log("if LessThan jump to:", code[++pos])
+                pos++
+            continue
+
+            case ByteCode.SAVE:
+                console.log("SAVE:", code[++pos])
+                pos++
+            continue
+
+
             case ByteCode.JUMP:
                 console.log("JUMP to:", code[++pos])
                 pos++
@@ -162,6 +182,79 @@ function prettyPrintByteCode(code:number[]){
 
 }
 
+function prettyPrintOpCode(op:number){
+
+        switch (op){
+            case ByteCode.ICONST:
+                console.log("ICONST " )
+            break
 
 
-export {prettyPrintAst, prettyPrintByteCode}
+            case ByteCode.IADD:
+                console.log("IADD ")
+            break
+
+            case ByteCode.IMUL:
+                console.log("IMUL ")
+            break
+
+            case ByteCode.ISUB:
+                console.log("ISUB ")
+            break
+
+            case ByteCode.IDIV:
+                console.log("IDIV ")
+            break
+
+
+            case ByteCode.PRINT:
+                console.log("PRINT ")
+            break
+
+            case ByteCode.RET:
+                console.log("RETURN ")
+            break
+
+
+            case ByteCode.CALL:
+                console.log("CALL " )
+            break
+
+            case ByteCode.LOAD:
+                console.log("LOAD:")
+            break
+
+            case ByteCode.JEQ:
+                console.log("if EQ jump ")
+            break
+
+            case ByteCode.JLT:
+                console.log("if LessThan jump")
+            break
+
+            case ByteCode.SAVE:
+                console.log("SAVE:", )
+            break
+
+
+            case ByteCode.JUMP:
+                console.log("JUMP to:", )
+            break
+
+
+            case ByteCode.HALT:
+                console.log("HALT")
+            break
+
+
+
+            default:
+                console.log("defaulted printing opcode  :" , op)
+
+        }
+
+}
+
+
+
+export {prettyPrintAst, prettyPrintByteCode, prettyPrintOpCode}

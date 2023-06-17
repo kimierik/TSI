@@ -3,10 +3,11 @@
 
 
 //walk ast and make the byte code from it
-import {ReturnNode, Statement, FunctionCall, FunctionDecl, VariableAssigment,Expr, } from "./parser";
+import {ReturnNode, Statement, FunctionCall, FunctionDecl, VariableAssigment,Expr,IfNode } from "./parser";
 import * as par from "./parser"
 import { ByteCode } from "../Bytecode";
 import {exit} from "process";
+import {prettyPrintByteCode} from "../utils/Prettyprint";
 
 interface Imap{
     [name:string]:number
@@ -43,7 +44,11 @@ export class ByteCodeCompiler{
                     break
 
                 case "VariableAssigment":
-                    this.compileVariableAssigment(statement as VariableAssigment)
+                    this.compileVariableAssigment(statement as VariableAssigment, caller)
+                    break
+
+                case "IFNODE":
+                    this.compileIfStatement(statement as IfNode, caller)
                     break
 
                 default:
@@ -58,6 +63,86 @@ export class ByteCodeCompiler{
     public getbytecode():number[]{
         return this.byteCodeArray
     }
+
+    private compileIfStatement( ifn:IfNode, caller:undefined|FunctionDecl ){
+
+        //we need start of else bod (later rn we dont need it)
+        //then we need start of true bod
+        //then we need to compile this shit and make comparison operators
+        //prob gon look like this
+        //
+        //JLE TrueBody-addr
+        //(else body)
+        //JUMP (over true body)
+        //(TrueBody)
+
+        this.compileExpression(ifn.lexpr, caller)
+        this.compileExpression(ifn.rexpr, caller)
+        this.byteCodeArray.push(this.getComparison(ifn.op))
+        //push the adress of true body
+        let falsebody=this.getCompiledBody(ifn.Fbody, caller)
+        let truebody=this.getCompiledBody(ifn.Tbody, caller)
+
+        let truebodyAdress= this.byteCodeArray.length + falsebody.length+ 2 +1  +2  //2? 1? 2?
+        this.byteCodeArray.push(truebodyAdress)
+
+        this.addToBytearray(falsebody)
+
+        this.byteCodeArray.push(ByteCode.JUMP)
+        this.byteCodeArray.push(this.byteCodeArray.length + truebody.length + 2 +1 ) //2 since jump and the literal //1 bc ??
+
+        this.addToBytearray(truebody)
+
+
+        //true body adress is else len+ 2 since were doing jump over true bod at the end
+
+        
+
+        
+
+
+
+    }
+
+    //??? idk if there are native alternatives to this fn
+    private addToBytearray(list:number[]){
+        for (let i =0; i<list.length;i++){
+            this.byteCodeArray.push(list[i])
+        }
+    }
+
+    private getCompiledBody(statements:Statement[],caller:undefined|FunctionDecl):number[]{
+        let p=this.byteCodeArray.length
+        let sublist:number[]=[]
+
+        this.compileAst(statements, caller)
+        //this.byteCodeArray.length=this.byteCodeArray.length-1  //remove Halt?
+        for (let i=p; i<this.byteCodeArray.length; i++){
+            sublist.push(this.byteCodeArray[i])
+        }
+        this.byteCodeArray.length=p
+
+
+        return sublist
+        
+    }
+
+
+    private getComparison(comp:string){
+        switch(comp){
+
+            case "==":
+            return ByteCode.JEQ
+            case "<":
+            return ByteCode.JLT
+
+            default:
+            console.log("un implemented comparison in compiler",comp)
+            exit(2)
+        }
+
+    }
+
 
     private compileReturn(stat:ReturnNode, caller:undefined|FunctionDecl){
         //what the fuck is return
@@ -119,7 +204,8 @@ export class ByteCodeCompiler{
 
                 if (caller ==undefined){
                     //is not argument
-                    console.log("not yet implemented caller undefined")
+                    //prettyPrintByteCode(this.byteCodeArray)
+                    console.log("not yet implemented caller undefined (variable refrnece)")
                     exit()
                     
                 }else{
@@ -133,7 +219,10 @@ export class ByteCodeCompiler{
                     }else{
                         //is not argument
                         // fp+1 is first local var
-                        this.byteCodeArray.push(ByteCode.LOAD)
+                        this.byteCodeArray.push(ByteCode.LOAD) 
+                        //we need to know how manyeth variable it is in the scope
+
+
                         //where is the variable on the stack 
                         //algo is 1+ how manyeth variable it was declared
                         console.log("not yet implemented")
@@ -190,6 +279,7 @@ export class ByteCodeCompiler{
         let addr=this.byteCodeArray.length+2
         let subList:number[]=[]
 
+        this.declaredFunctionsMap[decl.name]=addr
         //this is not good. i have made too many side effects to reuse this code
         //were taking what was added to byteCodeArray and adding it to sublist
         //then resetting bytecodearray
@@ -202,13 +292,12 @@ export class ByteCodeCompiler{
         this.byteCodeArray.length=addr-2
 
         this.byteCodeArray.push(ByteCode.JUMP)
-        this.byteCodeArray.push(this.byteCodeArray.length+ 1+ subList.length + 1) //1 is to offset this instruction //second 1 is to jump over ret
+        this.byteCodeArray.push(this.byteCodeArray.length+ 1+ subList.length + 3) //1 is to offset this instruction //3 is iconst 0 and ret
 
         for (let i=0; i<subList.length; i++){
             this.byteCodeArray.push(subList[i])
         }
 
-        this.declaredFunctionsMap[decl.name]=addr
 
 
         this.byteCodeArray.push(ByteCode.ICONST)
@@ -230,7 +319,10 @@ export class ByteCodeCompiler{
 
     }
 
-    private compileVariableAssigment(assigment:VariableAssigment){}
+    private compileVariableAssigment(assigment:VariableAssigment, caller: undefined|FunctionDecl){
+        this.byteCodeArray.push(ByteCode.SAVE)
+        this.compileExpression(assigment.val, caller)
+    }
 
 
     private isCoreFN(name:string):boolean{

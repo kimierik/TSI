@@ -1,5 +1,7 @@
     
+import {exit, stdin, stdout} from "process";
 import { ByteCode } from "./Bytecode";
+import {prettyPrintOpCode} from "./utils/Prettyprint";
 
 
 type VM = {
@@ -10,6 +12,7 @@ type VM = {
     ip:number,
     fp:number,
     sp:number,
+    debug:boolean,
 }
 
 function makeVM():VM{
@@ -20,14 +23,18 @@ function makeVM():VM{
         ip:0,
         fp:0,
         sp:-1,
+        debug:false
     }
 }
 
 
-function startVm(code : ByteCode[]){
+function startVm(code : ByteCode[],debug:undefined|boolean){
 
     let vm=makeVM();
     vm.instructions=code;
+    if (debug!=undefined){
+        vm.debug=debug
+    }
     
     //i should be ip as it is instrucion pointer
     while(vm.ip<vm.instructions.length) {
@@ -39,8 +46,12 @@ function startVm(code : ByteCode[]){
 
 
 function interpret_next_command(vm:VM){
-    //console.log("adress : ",vm.ip)
+    if (vm.debug){
+        stdout.write("adress : "+vm.ip+"\t")
+        prettyPrintOpCode(vm.instructions[vm.ip])
+    }
     let opcode= vm.instructions[vm.ip++];
+
 
     //i will purpoisly use as many preincrement and increment operations in indexing as possible
     switch (opcode){
@@ -82,8 +93,36 @@ function interpret_next_command(vm:VM){
             let offset=vm.instructions[vm.ip++]
             vm.stack[++vm.sp]=vm.stack[vm.fp+offset]
             break
+
+            //push val on stack
+        case ByteCode.SAVE:
+            vm.stack[++vm.sp]=vm.instructions[vm.ip++]
+            break
+
         case ByteCode.JUMP:
             vm.ip=vm.instructions[vm.ip]
+            break
+
+        case ByteCode.JEQ:
+            let eql=vm.stack[vm.sp--]
+            let eqr=vm.stack[vm.sp--]
+            if (eql==eqr){
+                vm.ip=vm.instructions[vm.ip]
+            }else{
+                //if we are not jumping we need to jump over the jump adress
+                vm.ip+=1
+            }
+            break
+
+        case ByteCode.JLT:
+            let ltr=vm.stack[vm.sp--]
+            let ltl=vm.stack[vm.sp--]
+            if (ltl<ltr){
+                vm.ip=vm.instructions[vm.ip]
+            }else{
+                //if we are not jumping we need to jump over the jump adress
+                vm.ip+=1
+            }
             break
 
         case ByteCode.CALL:
@@ -111,6 +150,13 @@ function interpret_next_command(vm:VM){
 
         case ByteCode.HALT:
             return
+        default: 
+            console.log("VM cannot interpret " ,opcode, "at adress :", vm.ip-1)
+            exit(2)
+    }
+
+    if (vm.debug){
+        console.log(vm.stack)
     }
 }
 

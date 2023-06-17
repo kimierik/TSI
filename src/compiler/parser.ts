@@ -6,6 +6,7 @@ import { TokenType } from "./lexer";
 import { getOperatorPrecidence, InfixToPostfix } from "../utils/fixTransoformations";
 import {exit} from "process";
 import { prettyPrintAst } from "../utils/Prettyprint";
+import {Z_NO_FLUSH} from "zlib";
 
 
 
@@ -145,8 +146,28 @@ function makeOpnode():OpNode{
         opp:""
 
     }
-
 }
+
+type IfNode={
+    discriminator:"IFNODE",
+    lexpr:Expr,
+    rexpr:Expr,
+    op:string,
+    Tbody:Statement[],
+    Fbody:Statement[]
+}
+
+function makeIfNode():IfNode{
+    return{
+        discriminator:"IFNODE",
+        lexpr:makeExpr(),
+        rexpr:makeExpr(),
+        op:"",
+        Tbody:[],
+        Fbody:[]
+    }
+}
+
 
 
 
@@ -207,12 +228,71 @@ class Parser{
             return makeReturnNode(e)
         }
 
+        if (this.tokens[this.position].tokentype==TokenType.KWIf){
+            return this.parseIfStatement()
+        }
+
+
         console.log("prev tok", this.tokens[this.position-1] ,"pos :", this.position-1 )
         console.log("no statement parsed from : ", this.tokens[this.position] ,"pos :", this.position )
         console.log("next tok", this.tokens[this.position+1] ,"pos :", this.position+1 )
         console.log()
         return undefined
     }
+
+
+    private parseIfStatement():IfNode{
+        //make if statement
+        //parse ()
+        //do we do if ()==(){}
+        //this is easiest with current setup
+        let node=makeIfNode()
+        this.position++ //skip if
+        this.position++ //skip (
+        node.lexpr=this.parsefunctionparameters()[0]
+        this.position++ //skip )
+        // get the comparison type
+        let s=""
+        while (this.tokens[this.position].tokentype!=TokenType.Lparen){
+            s+= this.tokens[this.position++].val
+        }
+        node.op=s
+
+        this.position++ //skip (
+        node.rexpr=this.parsefunctionparameters()[0]
+        this.position++ //skip )
+
+
+        this.position++ //skip{
+
+        //TODO make this in to function that returns Statement[]
+        //this does not stop the thing something jups over it
+        while( this.tokens[this.position].tokentype!=TokenType.Rsquerly){
+            let stat=this.parseStatement()
+            if (stat!=undefined){
+                node.Tbody.push(stat)
+            }
+        }
+        this.position++ //skip}
+        //if next is else kw
+
+        if(false){
+            this.position++ //skip{
+            while( this.tokens[this.position].tokentype!=TokenType.Rsquerly){
+                let stat=this.parseStatement()
+                if (stat!=undefined){
+                    //node.Fbody.push(stat)
+                }
+            }
+            this.position++ //skip}
+        }
+
+
+
+        return node
+    }
+
+
 
     private parseFunction():Statement{
         // go untill we hit the ) then if next is { then its a declt
@@ -312,11 +392,12 @@ class Parser{
     // returns list of expressions
     // opps are allready in binary tree form
     //TODO over massive funcdtion should a be split 
-    private parsefunctionparameters(){
+    private parsefunctionparameters():Expr[]{
 
 
-        let expressions:Expr[] = []
-        let post:Expr[] = []
+        let expressions:Expr[] = [] // all expressions in the parameters
+
+        let post:Expr[] = [] //buffer what we use when we are evaluating tokens into a tree
         //list of operators are needed for algo
         let opps:Token[]=[]
 
@@ -428,6 +509,7 @@ class Parser{
 
 
 
+    //TODO REWRITE so that it could work
     private parseVariableAssigment():Statement{
         //a value or operation expression
         let vari:VariableAssigment = makeVariableAssigment()
@@ -436,6 +518,7 @@ class Parser{
 
         this.position++//jump over var name
         this.position++ //jump over =
+        this.position++ //jump over (
 
         //is it a function 
         //is it a literal
@@ -444,8 +527,11 @@ class Parser{
         //or do we just do myvar=2*3+123*123*3/1;
         //i think we could do that
 
+        let val=this.parsefunctionparameters()
+        vari.val=val[0]
+        this.position++ //jump over )
 
-
+        /*
         let toEvalueate :Token[]=[]
 
         // TODO !!??!!??!!??!!??!!??!!??!!??!! WTF IS THIS??? HOW DOES THIS WORK, WE DONT HAVE SEMICOLONS
@@ -458,6 +544,7 @@ class Parser{
         if (a!=undefined){
             vari.val=a
         }
+        * */
 
 
         return vari
@@ -498,8 +585,6 @@ class Parser{
         //console.log("post")
         //console.log(postfix)
 
-
-
         //var exprs []Token
         var expressions :Expr[]=[]
 
@@ -521,7 +606,6 @@ class Parser{
 
 
             }else{
-                //fmt.Println(expressions)
                 let l=expressions.pop()
                 let r=expressions.pop()
                 let opp=makeOpnode()
@@ -533,8 +617,6 @@ class Parser{
         }
 
         
-        //fmt.Println("this is the expression tree")
-        //fmt.Println(expressions)
 
         return expressions[0]
 
@@ -543,6 +625,6 @@ class Parser{
 
 }
 
-export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode,OpNode,ReturnNode}
+export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode,OpNode,ReturnNode, IfNode}
 
 
