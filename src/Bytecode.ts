@@ -7,6 +7,7 @@ export enum ByteCode{
 
     LOAD,
     SAVE,
+    REPL,
 
 
     JLT,
@@ -30,6 +31,8 @@ export enum ByteCode{
     * JUMP          jumps to next value
     *
     * LOAD          loads value from stack
+    * save          push val to stack
+    * REPL          put top of stack to adress
     *
     * JLT           jump less than pop's 2 from stack compares if lesthan jumps to adress
     * JEQ           jump less than pop's 2 from stack compares if eq jumps to adress

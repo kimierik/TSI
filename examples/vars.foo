@@ -1,0 +1,11 @@
+
+funct(){
+    let a
+    a=(1)
+    let b
+    b=(2)
+    print(a+b)
+}
+
+
+funct()

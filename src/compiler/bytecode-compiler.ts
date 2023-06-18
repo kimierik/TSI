@@ -16,9 +16,11 @@ interface Imap{
 
 export class ByteCodeCompiler{
 
+    //the program
     private byteCodeArray:number[]=[]
 
     //key is function name, value is function adress in bytecode array (index)
+    //so we know what adress functions start at
     private declaredFunctionsMap:Imap={}
 
 
@@ -51,26 +53,29 @@ export class ByteCodeCompiler{
                     this.compileIfStatement(statement as IfNode, caller)
                     break
 
+                case "VariableDecl":
+                    this.compileVariableDecleration(statement as par.VariableDecl, caller)
+                    break
+
                 default:
                     console.log("uncompileable statement :" ,statement)
             }
         }
     }
 
-
-
-
     public getbytecode():number[]{
         return this.byteCodeArray
     }
 
+    private compileVariableDecleration(decl:par.VariableDecl, caller:undefined|FunctionDecl){ //idk if any of these are needed rn
+        //push nothing on the stack
+        this.byteCodeArray.push(ByteCode.SAVE)
+        this.byteCodeArray.push(0)
+
+    }
+
     private compileIfStatement( ifn:IfNode, caller:undefined|FunctionDecl ){
 
-        //we need start of else bod (later rn we dont need it)
-        //then we need start of true bod
-        //then we need to compile this shit and make comparison operators
-        //prob gon look like this
-        //
         //JLE TrueBody-addr
         //(else body)
         //JUMP (over true body)
@@ -83,26 +88,29 @@ export class ByteCodeCompiler{
         let falsebody=this.getCompiledBody(ifn.Fbody, caller)
         let truebody=this.getCompiledBody(ifn.Tbody, caller)
 
-        let truebodyAdress= this.byteCodeArray.length + falsebody.length+ 2 +1  +2  //2? 1? 2?
+        let truebodyAdress= this.byteCodeArray.length + falsebody.length+ 2 +1  +2  
+        // magic numbers: 
+        // 2:we are adding jump over true body at the end of falses body (2 instructions)  
+        // 1:jump over the adress itself  
+        // 2: ?
+        
         this.byteCodeArray.push(truebodyAdress)
 
         this.addToBytearray(falsebody)
 
         this.byteCodeArray.push(ByteCode.JUMP)
-        this.byteCodeArray.push(this.byteCodeArray.length + truebody.length + 2 +1 ) //2 since jump and the literal //1 bc ??
+        this.byteCodeArray.push(this.byteCodeArray.length + truebody.length + 2 +1 ) 
+        //magic numbers: 2: ?
+        //1  jump over the jump adress
 
         this.addToBytearray(truebody)
 
 
         //true body adress is else len+ 2 since were doing jump over true bod at the end
 
-        
-
-        
-
-
 
     }
+
 
     //??? idk if there are native alternatives to this fn
     private addToBytearray(list:number[]){
@@ -138,6 +146,7 @@ export class ByteCodeCompiler{
 
             default:
             console.log("un implemented comparison in compiler",comp)
+            console.trace()
             exit(2)
         }
 
@@ -186,6 +195,18 @@ export class ByteCodeCompiler{
 
     }
 
+    private getVarPos(name:string, caller:FunctionDecl):number|undefined{
+        for (let i=0;i<caller.body.length;i++){
+            if(caller.body[i].discriminator=="VariableDecl"){
+                let a=(caller.body[i] as par.VariableDecl)
+                if(a.name==name){
+                    return a.nth
+                }
+            }
+        }
+        return undefined
+    }
+
 
     //does this work?
     private compileExpression(expr:Expr, caller :undefined | FunctionDecl){
@@ -203,9 +224,15 @@ export class ByteCodeCompiler{
                 let vari = expr as par.VariableRefrence
 
                 if (caller ==undefined){
-                    //is not argument
+                    //is not argument 
+                    //no caller so this is not in any fyunction
+                    //we need to know when this variable was assigned since we need its adress relative to fp
+                    //
                     //prettyPrintByteCode(this.byteCodeArray)
-                    console.log("not yet implemented caller undefined (variable refrnece)")
+                    // find variable decl from some where
+
+                    console.log("not yet implemented can only use variables in function")
+                    console.trace()
                     exit()
                     
                 }else{
@@ -219,14 +246,21 @@ export class ByteCodeCompiler{
                     }else{
                         //is not argument
                         // fp+1 is first local var
-                        this.byteCodeArray.push(ByteCode.LOAD) 
                         //we need to know how manyeth variable it is in the scope
+                        let n=this.getVarPos(vari.name, caller)
+                        if (n==undefined){
+                            console.log("tried to acces undeclared variable :", vari.name)
+                            console.trace()
+                            exit()
+                        }
+
+                        this.byteCodeArray.push(ByteCode.LOAD)
+                        this.byteCodeArray.push(n+1) //fp+1 is first local var on the stack 
+
 
 
                         //where is the variable on the stack 
                         //algo is 1+ how manyeth variable it was declared
-                        console.log("not yet implemented")
-                        exit()
 
                     }
                 }
@@ -252,6 +286,8 @@ export class ByteCodeCompiler{
 
             default:
                 console.log("uncompileable expression :" ,expr, "in caller: ", caller)
+                console.trace()
+                exit()
         }
 
     }
@@ -269,6 +305,7 @@ export class ByteCodeCompiler{
                 return ByteCode.IDIV
             default:
                 console.log("unknown op: ",op)
+                console.trace()
                 exit()
         }
 
@@ -320,8 +357,35 @@ export class ByteCodeCompiler{
     }
 
     private compileVariableAssigment(assigment:VariableAssigment, caller: undefined|FunctionDecl){
-        this.byteCodeArray.push(ByteCode.SAVE)
-        this.compileExpression(assigment.val, caller)
+        if (caller!=undefined){
+            // get pos of variable
+            let n = this.getVarPos(assigment.name, caller)
+            if (n==undefined){
+                console.log("tried to compile assigmen to unknown variable: ", assigment)
+                console.log("n undefined" )
+                console.trace()
+                exit()
+
+            }
+
+            //instruction to push shit on stack
+            this.compileExpression(assigment.val, caller)
+
+
+
+            //replace n with top of stack
+            this.byteCodeArray.push(ByteCode.REPL)
+            this.byteCodeArray.push(n+1) 
+            //offset by 1 bc nth's start at 0
+            
+
+            // push new value on stack
+        }else{
+            console.log("tried to compile assigmen to unknown variable: ", assigment)
+            console.trace()
+            exit()
+        }
+
     }
 
 
@@ -344,6 +408,7 @@ export class ByteCodeCompiler{
 
             default :
                 console.log("unimplemented core function: ", call)
+                console.trace()
                 exit()
         }
 

@@ -5,6 +5,7 @@ import {exit} from "process"
 //should be used to lex a file and a line
 //so we can do propper interpretation thing
 
+
 export enum TokenType{
     Illegal,
 
@@ -28,9 +29,23 @@ export enum TokenType{
 
     KWReturn,
     KWIf,
+    KWLet,
+    KWElse,
 }
 
+//keywords
+export interface kwmap{
+    [name:string]:number
+}
 
+//kw's are a global in this file for now
+let kws:kwmap={}
+
+//set manually
+kws["if"]=TokenType.KWIf
+kws["return"]=TokenType.KWReturn
+kws["let"]=TokenType.KWLet
+kws["else"]=TokenType.KWElse
 
 type Token={
     tokentype:TokenType,
@@ -98,7 +113,7 @@ function lexInput(input:string):Token[]{
                 strPos++
                 continue
 
-            case '+' || '/':
+            case '+':
                 tokens.push(makeToken(TokenType.Operator, char))
                 strPos++
                 continue
@@ -190,20 +205,12 @@ function lexInput(input:string):Token[]{
 //TODO make the keyword handling better
 
 function isKeyword(id:string):boolean{
-    return id=="return" || id=="if"
+    return kws[id]!=undefined
 }
 
+//function assumes id is kw
 function handleKeyword(id:string):Token{
-    switch(id){
-        case "return":
-            return makeToken(TokenType.KWReturn, id)
-        case "if":
-            return makeToken(TokenType.KWIf, id)
-        default:
-            console.log("cannot handle keyword : ",id)
-            exit()
-    }
-
+    return makeToken(kws[id], id)
 }
 
 

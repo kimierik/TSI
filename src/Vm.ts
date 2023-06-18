@@ -94,10 +94,17 @@ function interpret_next_command(vm:VM){
             vm.stack[++vm.sp]=vm.stack[vm.fp+offset]
             break
 
-            //push val on stack
+        //push val on stack
         case ByteCode.SAVE:
             vm.stack[++vm.sp]=vm.instructions[vm.ip++]
             break
+
+        case ByteCode.REPL:
+            let roffset=vm.instructions[vm.ip++]
+            //stack at adress   is top of stack
+            vm.stack[vm.fp+roffset] = vm.stack[vm.sp--]
+        break
+
 
         case ByteCode.JUMP:
             vm.ip=vm.instructions[vm.ip]

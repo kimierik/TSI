@@ -14,7 +14,6 @@ function main(){
     console.log("main start")
     let filename=""
 
-    console.log(process.argv.length)
 
     if (process.argv.length==1){
         printHelp()

@@ -144,6 +144,11 @@ function prettyPrintByteCode(code:number[]){
                 pos++
             continue
 
+            case ByteCode.REPL:
+                console.log("REPL:", code[++pos])
+                pos++
+            continue
+
             case ByteCode.JEQ:
                 console.log("if EQ jump to:", code[++pos])
                 pos++

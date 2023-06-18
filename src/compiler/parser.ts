@@ -6,7 +6,6 @@ import { TokenType } from "./lexer";
 import { getOperatorPrecidence, InfixToPostfix } from "../utils/fixTransoformations";
 import {exit} from "process";
 import { prettyPrintAst } from "../utils/Prettyprint";
-import {Z_NO_FLUSH} from "zlib";
 
 
 
@@ -82,6 +81,28 @@ type VariableRefrence={
     eDiscriminator:"VariableRefrence"
     name:string,
 }
+function makeVariableRefrence(name:string):VariableRefrence{
+    return{
+        eDiscriminator:"VariableRefrence",
+        name:name,
+    }
+}
+
+
+type VariableDecl={
+    discriminator:"VariableDecl"
+    name:string,
+    nth:number,
+}
+
+function makeVariableDecl():VariableDecl{
+    return{
+        discriminator:"VariableDecl",
+        name:"",
+        nth:0
+    }
+}
+
 
 type ReturnNode={
     discriminator:"ReturnStatement"
@@ -94,12 +115,6 @@ function makeReturnNode(e:Expr):ReturnNode{
     }
 }
 
-function makeVariableRefrence(name:string):VariableRefrence{
-    return{
-        eDiscriminator:"VariableRefrence",
-        name:name,
-    }
-}
 
 
 type VariableAssigment={
@@ -228,6 +243,10 @@ class Parser{
             return makeReturnNode(e)
         }
 
+        if (this.tokens[this.position].tokentype==TokenType. KWLet){
+            return this.parseVariableDecleration()
+        }
+
         if (this.tokens[this.position].tokentype==TokenType.KWIf){
             return this.parseIfStatement()
         }
@@ -276,6 +295,7 @@ class Parser{
         this.position++ //skip}
         //if next is else kw
 
+        //TODO implement else block of if statement
         if(false){
             this.position++ //skip{
             while( this.tokens[this.position].tokentype!=TokenType.Rsquerly){
@@ -341,8 +361,17 @@ class Parser{
             if (stat!=undefined){
                 decl.body.push(stat)
             }
-
         }
+
+        // note nth!=i
+        let nth=0
+        for (let i =0;i<decl.body.length;i++){
+            if(decl.body[i].discriminator=="VariableDecl"){
+                (decl.body[i] as VariableDecl).nth=nth++
+            }
+        }
+
+
 
           //console.log("fn decl name: ",decl.name,". params: ", decl.params, ". body: ",decl.body )
         this.position++ //skip }
@@ -386,6 +415,7 @@ class Parser{
 
 
         console.log("no expression " , this.tokens[this.position])
+        console.trace()
         exit()
     }
 
@@ -508,6 +538,19 @@ class Parser{
     }
 
 
+    private parseVariableDecleration():VariableDecl{
+        let decl=makeVariableDecl()
+        //
+        this.position++ //skip let kw
+        decl.name= this.tokens[this.position++].val //skip id
+        //TODO we do not have initialisastion things
+        //variables are let a
+        //rn
+
+        return decl
+    }
+
+
 
     //TODO REWRITE so that it could work
     private parseVariableAssigment():Statement{
@@ -551,80 +594,10 @@ class Parser{
 
     }
 
-    //takes list of tokens [1+2] and makes it into an expression
-    private EvaluateExpression( toEvalueate:Token[]):Expr|undefined{
-
-        if(toEvalueate.length==0){
-            return undefined
-        }
-
-
-        if(toEvalueate.length==1){
-            let tok=toEvalueate[0]
-
-            switch (tok.tokentype){
-            case TokenType.NumLiteral:
-                let val=parseInt(tok.val)
-                return makeILiteralNode(val)
-
-                /*
-            case StringLiteral:
-                return Stringliteral{tok.tokenVal}
-                    * */
-
-            case TokenType.Identifier:
-                return makeVariableRefrence(tok.val)
-            }
-        }
-        
-        //console.log("evalling")
-        //console.log(toEvalueate)
-
-        let postfix:Token[]=InfixToPostfix(toEvalueate)
-
-        //console.log("post")
-        //console.log(postfix)
-
-        //var exprs []Token
-        var expressions :Expr[]=[]
-
-        for (let i=0;i<postfix.length;i++){
-            if (postfix[i].tokentype!=TokenType.Operator){
-                //switch and match what the token is?
-                switch (postfix[i].tokentype){
-                    case TokenType.NumLiteral:
-                        let val=parseInt(  postfix[i].val)
-                        expressions.push( makeILiteralNode(val)) //iliteral node
-                        break
-                    case TokenType.Identifier:
-                        expressions.push(makeVariableRefrence(postfix[i].val))
-                        break
-
-                    default: 
-                        console.log("EXPRESSION IS BAD", postfix[0])
-                }
-
-
-            }else{
-                let l=expressions.pop()
-                let r=expressions.pop()
-                let opp=makeOpnode()
-                opp.l=intoExpr(l)
-                opp.r=intoExpr(r)
-                opp.opp=postfix[i].val
-                expressions.push(opp) //opp node
-            }
-        }
-
-        
-
-        return expressions[0]
-
-    }
 
 
 }
 
-export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode,OpNode,ReturnNode, IfNode}
+export {Parser, Statement, Expr, FunctionCall,FunctionDecl,VariableRefrence,VariableAssigment, ILiteralNode,OpNode,ReturnNode, IfNode, VariableDecl}
 
 
