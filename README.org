@@ -6,7 +6,7 @@
     
    run 
    #+BEGIN_SRC bash
-     npm run run 
+     npm run run path/to/file.foo
    #+END_SRC
    currently this executes examples/test.foo
 
@@ -15,8 +15,8 @@
     - [X] functions  
     - [X] expression execution order
     - [X] printing ints
-    - [-] variables
-    - [ ] conditionals (if else)
+    - [X] variables
+    - [X] conditionals (if else)
     - [ ] loops
 
 
