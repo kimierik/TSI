@@ -1,0 +1,16 @@
+
+
+
+stat(a){
+    if (a)==(1){
+        print(1)
+    }else{
+        print(2)
+    }
+    print(3)
+}
+stat(2)
+
+stat(1)
+
+

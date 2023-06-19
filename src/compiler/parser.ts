@@ -296,12 +296,13 @@ class Parser{
         //if next is else kw
 
         //TODO implement else block of if statement
-        if(false){
+        if(this.tokens[this.position].tokentype==TokenType.KWElse){
+            this.position++ //skip{
             this.position++ //skip{
             while( this.tokens[this.position].tokentype!=TokenType.Rsquerly){
                 let stat=this.parseStatement()
                 if (stat!=undefined){
-                    //node.Fbody.push(stat)
+                    node.Fbody.push(stat)
                 }
             }
             this.position++ //skip}
