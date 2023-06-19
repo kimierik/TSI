@@ -92,6 +92,7 @@ function makeVariableRefrence(name:string):VariableRefrence{
 type VariableDecl={
     discriminator:"VariableDecl"
     name:string,
+    init:Expr|undefined
     nth:number,
 }
 
@@ -99,7 +100,8 @@ function makeVariableDecl():VariableDecl{
     return{
         discriminator:"VariableDecl",
         name:"",
-        nth:0
+        init:undefined,
+        nth:0,
     }
 }
 
@@ -293,11 +295,11 @@ class Parser{
             }
         }
         this.position++ //skip}
+            
         //if next is else kw
-
-        //TODO implement else block of if statement
+        //else statement
         if(this.tokens[this.position].tokentype==TokenType.KWElse){
-            this.position++ //skip{
+            this.position++ //skip Elsekw
             this.position++ //skip{
             while( this.tokens[this.position].tokentype!=TokenType.Rsquerly){
                 let stat=this.parseStatement()
@@ -526,7 +528,6 @@ class Parser{
 
 
 
-
         //put postfix should be size 1 and we should push it onto expressionss
         //console.log("post size", post.length)
         let e=post.pop()
@@ -541,19 +542,22 @@ class Parser{
 
     private parseVariableDecleration():VariableDecl{
         let decl=makeVariableDecl()
-        //
         this.position++ //skip let kw
         decl.name= this.tokens[this.position++].val //skip id
-        //TODO we do not have initialisastion things
-        //variables are let a
-        //rn
+        
+        //if next token is eq we are initialising the variable
+        if (this.tokens[this.position].tokentype==TokenType.Equals){
+            this.position++ //skip =
+            this.position++ //skip (
+            decl.init=this.parsefunctionparameters()[0]
+            this.position++ //skip )
+        }
 
         return decl
     }
 
 
 
-    //TODO REWRITE so that it could work
     private parseVariableAssigment():Statement{
         //a value or operation expression
         let vari:VariableAssigment = makeVariableAssigment()
@@ -564,31 +568,11 @@ class Parser{
         this.position++ //jump over =
         this.position++ //jump over (
 
-        //is it a function 
-        //is it a literal
-        //is it an operand expression
-        // do i need to add \n to the list of things that we could be looking at so we can determine when do we end var assigmen
-        //or do we just do myvar=2*3+123*123*3/1;
-        //i think we could do that
 
         let val=this.parsefunctionparameters()
         vari.val=val[0]
         this.position++ //jump over )
 
-        /*
-        let toEvalueate :Token[]=[]
-
-        // TODO !!??!!??!!??!!??!!??!!??!!??!! WTF IS THIS??? HOW DOES THIS WORK, WE DONT HAVE SEMICOLONS
-        while( this.tokens[this.position].tokentype!=TokenType.Semicolon){
-            toEvalueate.push( this.tokens[this.position++])
-        }
-
-        this.position++ //skip ; //for some reason this was not needed in go
-        let a =this.EvaluateExpression(toEvalueate)
-        if (a!=undefined){
-            vari.val=a
-        }
-        * */
 
 
         return vari

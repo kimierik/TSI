@@ -68,9 +68,14 @@ export class ByteCodeCompiler{
     }
 
     private compileVariableDecleration(decl:par.VariableDecl, caller:undefined|FunctionDecl){ //idk if any of these are needed rn
-        //push nothing on the stack
-        this.byteCodeArray.push(ByteCode.SAVE)
-        this.byteCodeArray.push(0)
+        //push value on to stack
+        if (decl.init !=undefined ){
+            //console.log("comp",decl)
+            this.compileExpression(decl.init, caller)
+        }else{
+            this.byteCodeArray.push(ByteCode.ICONST)
+            this.byteCodeArray.push(0) //init at 0 if nothing 
+        }
 
     }
 
@@ -280,9 +285,9 @@ export class ByteCodeCompiler{
                 this.byteCodeArray.push(n.val)
                 break
 
-                case "FunctionCall":
-                    this.compileFunctionCall(expr as FunctionCall,caller)
-                    break
+            case "FunctionCall":
+                this.compileFunctionCall(expr as FunctionCall,caller)
+                break
 
             default:
                 console.log("uncompileable expression :" ,expr, "in caller: ", caller)
