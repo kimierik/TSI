@@ -7,7 +7,6 @@ import {ReturnNode, Statement, FunctionCall, FunctionDecl, VariableAssigment,Exp
 import * as par from "./parser"
 import { ByteCode } from "../Bytecode";
 import {exit} from "process";
-import {prettyPrintByteCode} from "../utils/Prettyprint";
 
 interface Imap{
     [name:string]:number
@@ -59,6 +58,8 @@ export class ByteCodeCompiler{
 
                 default:
                     console.log("uncompileable statement :" ,statement)
+                    console.trace()
+                    exit(2)
             }
         }
     }
@@ -95,9 +96,9 @@ export class ByteCodeCompiler{
 
         let truebodyAdress= this.byteCodeArray.length + falsebody.length+ 2 +1  +2  
         // magic numbers: 
-        // 2:we are adding jump over true body at the end of falses body (2 instructions)  
-        // 1:jump over the adress itself  
-        // 2: ?
+        // 2: we are adding jump over true body at the end of falses body (2 instructions)  
+        // 1: jump over the adress itself  
+        // 2: = falsebody.length points to last in false body. we need to +1 to jump over it. same with byteCodeArray.length
         
         this.byteCodeArray.push(truebodyAdress)
 
@@ -105,14 +106,11 @@ export class ByteCodeCompiler{
 
         this.byteCodeArray.push(ByteCode.JUMP)
         this.byteCodeArray.push(this.byteCodeArray.length + truebody.length + 2 +1 ) 
-        //magic numbers: 2: ?
-        //1  jump over the jump adress
+        //magic numbers: 
+        // 2: = truebody.length points to last in true body. we need to +1 to jump over it. same with byteCodeArray.length
+        // 1  jump over the jump adress
 
         this.addToBytearray(truebody)
-
-
-        //true body adress is else len+ 2 since were doing jump over true bod at the end
-
 
     }
 
@@ -124,6 +122,7 @@ export class ByteCodeCompiler{
         }
     }
 
+    //HACK this returns a list of numbers. cannot use compileAst since i have written that function with too many side effects
     private getCompiledBody(statements:Statement[],caller:undefined|FunctionDecl):number[]{
         let p=this.byteCodeArray.length
         let sublist:number[]=[]
@@ -137,13 +136,11 @@ export class ByteCodeCompiler{
 
 
         return sublist
-        
     }
 
 
     private getComparison(comp:string){
         switch(comp){
-
             case "==":
             return ByteCode.JEQ
             case "<":
@@ -159,8 +156,7 @@ export class ByteCodeCompiler{
 
 
     private compileReturn(stat:ReturnNode, caller:undefined|FunctionDecl){
-        //what the fuck is return
-        //just push the literal and then RET?
+        //just push the literal and then RET
         this.compileExpression(stat.rets, caller)
         this.byteCodeArray.push(ByteCode.RET)
 
@@ -190,6 +186,7 @@ export class ByteCodeCompiler{
     }
 
 
+    //if {name} of variable is argument not variable
     private isArg(name:string,func:FunctionDecl){
         for(let i=0;i<func.parameterC;i++){
             if (func.parameterNames[i]==name){
@@ -221,20 +218,11 @@ export class ByteCodeCompiler{
 
         switch (expr.eDiscriminator){
             case "VariableRefrence":
-                //what is var refrence
-                //we need to see if it is param or assigned var then calculate the offset
-                //needs to be a ware of the function that is calling it
-                // do we pass as argument=?
-                // then we need to pas the calledt to compiler call
+
                 let vari = expr as par.VariableRefrence
 
                 if (caller ==undefined){
-                    //is not argument 
-                    //no caller so this is not in any fyunction
-                    //we need to know when this variable was assigned since we need its adress relative to fp
-                    //
-                    //prettyPrintByteCode(this.byteCodeArray)
-                    // find variable decl from some where
+                    //variable is not in any function it is written on the "base layer"
 
                     console.log("not yet implemented can only use variables in function")
                     console.trace()
@@ -261,11 +249,6 @@ export class ByteCodeCompiler{
 
                         this.byteCodeArray.push(ByteCode.LOAD)
                         this.byteCodeArray.push(n+1) //fp+1 is first local var on the stack 
-
-
-
-                        //where is the variable on the stack 
-                        //algo is 1+ how manyeth variable it was declared
 
                     }
                 }
@@ -317,15 +300,20 @@ export class ByteCodeCompiler{
     }
 
     private compileFunctionDecl(decl:FunctionDecl){
+        //function declaration
+        //first jump over the first make something that jumnps over the function
+        //so wse dont exec it when we are trying to define it
+        
+
         //adress is the top of the array +2 since we are goiing to do a goto
         let addr=this.byteCodeArray.length+2
         let subList:number[]=[]
 
         this.declaredFunctionsMap[decl.name]=addr
+
         //this is not good. i have made too many side effects to reuse this code
         //were taking what was added to byteCodeArray and adding it to sublist
         //then resetting bytecodearray
-
         this.compileAst(decl.body, decl)
         //this.byteCodeArray.length=this.byteCodeArray.length-1  //remove Halt?
         for (let i=addr-2; i<this.byteCodeArray.length; i++){
@@ -333,35 +321,25 @@ export class ByteCodeCompiler{
         }
         this.byteCodeArray.length=addr-2
 
+        //we reset bytecode array so we can add jump instruction before the function's code
+        //this way when we walk the ByteCode list we jump over function declerations and dont execute them as functions
         this.byteCodeArray.push(ByteCode.JUMP)
         this.byteCodeArray.push(this.byteCodeArray.length+ 1+ subList.length + 3) //1 is to offset this instruction //3 is iconst 0 and ret
 
+        //re add functions body to byteCodeArray
         for (let i=0; i<subList.length; i++){
             this.byteCodeArray.push(subList[i])
         }
 
-
-
+        //if there is no return. return 0
         this.byteCodeArray.push(ByteCode.ICONST)
         this.byteCodeArray.push(0)
         this.byteCodeArray.push(ByteCode.RET)
-        
-
-
-
-        //len of function is array.len - addr (array len is at the end of all tokens)
-        //or we make a sub list that we then append averything to the main list
-        //this way we can construct the list with what we weant
-        //also we know the len before we append anuthing to bytecode array
-
-        
-        //function declaration
-        //first jump over the first make something that jumnps over the function
-        //so wse dont exec it when we are trying to define it
 
     }
 
     private compileVariableAssigment(assigment:VariableAssigment, caller: undefined|FunctionDecl){
+
         if (caller!=undefined){
             // get pos of variable
             let n = this.getVarPos(assigment.name, caller)
@@ -375,8 +353,6 @@ export class ByteCodeCompiler{
 
             //instruction to push shit on stack
             this.compileExpression(assigment.val, caller)
-
-
 
             //replace n with top of stack
             this.byteCodeArray.push(ByteCode.REPL)
@@ -394,13 +370,17 @@ export class ByteCodeCompiler{
     }
 
 
+    //check if is core function
     private isCoreFN(name:string):boolean{
         //when more core fns make a datastructure to see if it is corefn
         return name == "print"
     }
 
+    //core functions are functions that i will manually make bytecode for
+    //like printing etc
     private compileCorefns(call:FunctionCall,caller:undefined|FunctionDecl){
         switch(call.name){
+
             case"print":
 
                 for (let i=0; i<call.arguments.length;i++){
@@ -418,6 +398,5 @@ export class ByteCodeCompiler{
         }
 
     }
-
 
 }
